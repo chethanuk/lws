@@ -122,7 +122,33 @@ func TestValidate(t *testing.T) {
 			wantErr: field.ErrorList{
 				&field.Error{
 					Type:  field.ErrorTypeNotSupported,
-					Field: "featureGates",
+					Field: "featureGates[UnknownGate]",
+				},
+			},
+		},
+		"two unknown feature gates are reported in sorted order": {
+			cfg: &configapi.Configuration{
+				FeatureGates: map[string]bool{"Zeta": true, "Alpha": false},
+			},
+			wantErr: field.ErrorList{
+				&field.Error{
+					Type:  field.ErrorTypeNotSupported,
+					Field: "featureGates[Alpha]",
+				},
+				&field.Error{
+					Type:  field.ErrorTypeNotSupported,
+					Field: "featureGates[Zeta]",
+				},
+			},
+		},
+		"known plus unknown feature gate": {
+			cfg: &configapi.Configuration{
+				FeatureGates: map[string]bool{"WorkloadAwareScheduling": true, "UnknownGate": true},
+			},
+			wantErr: field.ErrorList{
+				&field.Error{
+					Type:  field.ErrorTypeNotSupported,
+					Field: "featureGates[UnknownGate]",
 				},
 			},
 		},
@@ -139,5 +165,21 @@ func TestValidate(t *testing.T) {
 				t.Errorf("Unexpected returned error (-want,+got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestValidateUnsupportedSchedulerProviderMessage(t *testing.T) {
+	cfg := &configapi.Configuration{
+		GangSchedulingManagement: &configapi.GangSchedulingManagement{
+			SchedulerProvider: ptr.To("unsupported-scheduler"),
+		},
+	}
+	errs := validate(cfg)
+	if len(errs) != 1 {
+		t.Fatalf("Expected 1 error, got %d: %v", len(errs), errs)
+	}
+	want := `supported values: "kubernetes", "volcano"`
+	if got := errs[0].Detail; got != want {
+		t.Errorf("Unexpected error detail:\nwant: %s\ngot:  %s", want, got)
 	}
 }

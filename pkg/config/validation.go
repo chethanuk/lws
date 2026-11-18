@@ -17,9 +17,11 @@ limitations under the License.
 package config
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/sets"
 	apimachineryvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
@@ -32,6 +34,7 @@ import (
 var (
 	internalCertManagementPath = field.NewPath("internalCertManagement")
 	schedulerProviderPath      = field.NewPath("schedulerProvider")
+	featureGatesPath           = field.NewPath("featureGates")
 )
 
 func validate(c *configapi.Configuration) field.ErrorList {
@@ -43,12 +46,14 @@ func validate(c *configapi.Configuration) field.ErrorList {
 }
 
 func validateFeatureGates(c *configapi.Configuration) field.ErrorList {
-	for name := range c.FeatureGates {
-		if !slices.Contains(features.Known(), name) {
-			return field.ErrorList{field.NotSupported(field.NewPath("featureGates"), c.FeatureGates, features.Known())}
+	var allErrs field.ErrorList
+	known := features.Known()
+	for _, name := range slices.Sorted(maps.Keys(c.FeatureGates)) {
+		if !slices.Contains(known, name) {
+			allErrs = append(allErrs, field.NotSupported(featureGatesPath.Key(name), name, known))
 		}
 	}
-	return nil
+	return allErrs
 }
 
 func validateSchedulerProvider(c *configapi.Configuration) field.ErrorList {
@@ -60,7 +65,7 @@ func validateSchedulerProvider(c *configapi.Configuration) field.ErrorList {
 		}
 		// Validate that the scheduler provider is in the supported list
 		if !schedulerprovider.SupportedSchedulerProviders.Has(*c.GangSchedulingManagement.SchedulerProvider) {
-			allErrs = append(allErrs, field.NotSupported(schedulerProviderPath, c.GangSchedulingManagement.SchedulerProvider, schedulerprovider.SupportedSchedulerProviders.UnsortedList()))
+			allErrs = append(allErrs, field.NotSupported(schedulerProviderPath, c.GangSchedulingManagement.SchedulerProvider, sets.List(schedulerprovider.SupportedSchedulerProviders)))
 		}
 	}
 	return allErrs

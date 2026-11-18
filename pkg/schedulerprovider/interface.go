@@ -122,6 +122,6 @@ func NewSchedulerProvider(providerType ProviderType, client client.Client) (Sche
 	case Kubernetes:
 		return NewKubernetesProvider(client), nil
 	default:
-		return nil, fmt.Errorf("unsupported scheduler provider type %s, the supported provider list is %v", providerType, SupportedSchedulerProviders.UnsortedList())
+		return nil, fmt.Errorf("unsupported scheduler provider type %s, the supported provider list is %v", providerType, sets.List(SupportedSchedulerProviders))
 	}
 }
