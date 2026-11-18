@@ -93,8 +93,8 @@ func TestNewSchedulerProvider(t *testing.T) {
 	}{
 		"volcano":     {providerType: Volcano},
 		"kubernetes":  {providerType: Kubernetes},
-		"unsupported": {providerType: ProviderType("yarn"), wantErr: "unsupported scheduler provider type yarn"},
-		"empty":       {providerType: ProviderType(""), wantErr: "unsupported scheduler provider type"},
+		"unsupported": {providerType: ProviderType("yarn"), wantErr: "unsupported scheduler provider type yarn, the supported provider list is [kubernetes volcano]"},
+		"empty":       {providerType: ProviderType(""), wantErr: "unsupported scheduler provider type , the supported provider list is [kubernetes volcano]"},
 	}
 
 	for name, tc := range tests {
@@ -102,7 +102,7 @@ func TestNewSchedulerProvider(t *testing.T) {
 			provider, err := NewSchedulerProvider(tc.providerType, fakeClient)
 			if tc.wantErr != "" {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.wantErr)
+				assert.EqualError(t, err, tc.wantErr)
 				assert.Nil(t, provider)
 				return
 			}
